@@ -1,11 +1,9 @@
 import { supabase } from '../../integrations/supabase/client';
-import type { 
-  MenuCategory, MenuItem, Order, OrderItem, 
-  Payment, Table, User 
-} from './schema';
+import type { Tables } from '../../integrations/supabase/types';
 
-// Type-safe database operations
-export async function get<T>(table: string, id: string): Promise<T> {
+type TableName = keyof Tables;
+
+export async function get<T extends TableName>(table: T, id: string): Promise<Tables[T]> {
   const { data, error } = await supabase
     .from(table)
     .select('*')
@@ -13,19 +11,22 @@ export async function get<T>(table: string, id: string): Promise<T> {
     .single();
     
   if (error) throw error;
-  return data as T;
+  return data;
 }
 
-export async function getAll<T>(table: string): Promise<T[]> {
+export async function getAll<T extends TableName>(table: T): Promise<Tables[T][]> {
   const { data, error } = await supabase
     .from(table)
     .select('*');
     
   if (error) throw error;
-  return data as T[];
+  return data;
 }
 
-export async function put<T>(table: string, item: T): Promise<T> {
+export async function put<T extends TableName>(
+  table: T, 
+  item: Partial<Tables[T]>
+): Promise<Tables[T]> {
   const { data, error } = await supabase
     .from(table)
     .upsert(item)
@@ -33,10 +34,10 @@ export async function put<T>(table: string, item: T): Promise<T> {
     .single();
     
   if (error) throw error;
-  return data as T;
+  return data;
 }
 
-export async function remove(table: string, id: string): Promise<void> {
+export async function remove(table: TableName, id: string): Promise<void> {
   const { error } = await supabase
     .from(table)
     .delete()
@@ -45,7 +46,6 @@ export async function remove(table: string, id: string): Promise<void> {
   if (error) throw error;
 }
 
-// Re-export functions with type safety
 export const db = {
   get,
   getAll,

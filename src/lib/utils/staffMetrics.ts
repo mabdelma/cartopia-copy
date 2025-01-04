@@ -1,68 +1,69 @@
 import { supabase } from '../../integrations/supabase/client';
-import type { User, Order } from '../db/schema';
+import type { User } from '../db/schema';
 
 export async function getStaffMetrics(userId: string) {
-  const { data: orders, error: ordersError } = await supabase
+  const { data: orders, error } = await supabase
     .from('orders')
     .select('*')
-    .or(`kitchen_staff_id.eq.${userId},waiter_staff_id.eq.${userId},cashier_id.eq.${userId}`);
+    .or(`waiter_staff_id.eq.${userId},kitchen_staff_id.eq.${userId},cashier_id.eq.${userId}`);
 
-  if (ordersError) throw ordersError;
+  if (error) throw error;
 
-  const metrics = {
-    ordersHandled: orders?.length || 0,
-    avgServiceTime: calculateAverageServiceTime(orders || []),
-    totalSales: calculateTotalSales(orders || []),
-    rating: calculateRating(orders || [])
+  return {
+    ordersHandled: orders.length,
+    avgServiceTime: calculateAverageServiceTime(orders),
+    totalSales: calculateTotalSales(orders),
+    rating: calculateStaffRating(orders)
   };
-
-  return metrics;
 }
 
-export async function updateStaffMetrics(userId: string, order?: Order) {
-  try {
-    const metrics = await getStaffMetrics(userId);
-    
-    // Update user metrics in the database
-    const { error } = await supabase
-      .from('users')
-      .update({
-        last_active: new Date().toISOString(),
-        // Add any other metric updates here
-      })
-      .eq('id', userId);
-
-    if (error) throw error;
-    
-    return metrics;
-  } catch (error) {
-    console.error('Failed to update staff metrics:', error);
-    throw error;
-  }
-}
-
-function calculateAverageServiceTime(orders: any[]): number {
-  if (!orders.length) return 0;
+export async function updateStaffMetrics(userId: string) {
+  const metrics = await getStaffMetrics(userId);
   
-  const totalTime = orders.reduce((sum, order) => {
-    const start = new Date(order.created_at).getTime();
-    const end = order.completed_at 
-      ? new Date(order.completed_at).getTime()
-      : Date.now();
-    return sum + (end - start);
-  }, 0);
-
-  return Math.round(totalTime / orders.length / 1000 / 60); // Convert to minutes
+  const { error } = await supabase
+    .from('users')
+    .update({ metrics })
+    .eq('id', userId);
+    
+  if (error) throw error;
 }
 
-function calculateTotalSales(orders: any[]): number {
+function calculateAverageServiceTime(orders: any[]) {
+  if (orders.length === 0) return 0;
+  
+  const serviceTimes = orders.map(order => {
+    const start = new Date(order.created_at).getTime();
+    const end = new Date(order.completed_at || order.updated_at).getTime();
+    return (end - start) / 60000; // minutes
+  });
+  
+  return serviceTimes.reduce((a, b) => a + b, 0) / serviceTimes.length;
+}
+
+function calculateTotalSales(orders: any[]) {
   return orders.reduce((sum, order) => sum + (order.total || 0), 0);
 }
 
-function calculateRating(orders: any[]): number {
-  const completedOrders = orders.filter(o => o.completed_at);
-  if (!completedOrders.length) return 5;
+function calculateStaffRating(orders: any[]) {
+  if (orders.length === 0) return 0;
   
-  const complaintsCount = orders.filter(o => o.has_complaints).length;
-  return Math.max(1, 5 - (complaintsCount / completedOrders.length) * 5);
+  const completionScore = calculateCompletionScore(orders);
+  const accuracyScore = calculateAccuracyScore(orders);
+  const volumeScore = calculateVolumeScore(orders.length);
+  
+  return (completionScore + accuracyScore + volumeScore) / 3;
+}
+
+function calculateCompletionScore(orders: any[]) {
+  const avgCompletionTime = calculateAverageServiceTime(orders);
+  return Math.min(1, 30 / avgCompletionTime) * 5;
+}
+
+function calculateAccuracyScore(orders: any[]) {
+  const accurateOrders = orders.filter(o => !o.has_complaints).length;
+  return (accurateOrders / orders.length) * 5;
+}
+
+function calculateVolumeScore(orderCount: number) {
+  return Math.min(1, orderCount / 20) * 5;
 }
