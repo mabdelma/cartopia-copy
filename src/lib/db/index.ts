@@ -62,3 +62,16 @@ export async function remove(
     .eq('id', id);
   if (error) throw error;
 }
+
+// Re-export getDB for backward compatibility
+export const getDB = {
+  get,
+  getAll,
+  put,
+  delete: remove,
+  add: put,
+  clear: async (table: string) => {
+    const { error } = await supabase.from(table).delete().neq('id', '');
+    if (error) throw error;
+  }
+};

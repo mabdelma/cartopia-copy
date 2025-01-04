@@ -11,7 +11,7 @@ export type User = Database['public']['Tables']['users']['Row'];
 export type OrderWithDetails = Order & {
   items: (OrderItem & { menuItem: MenuItem })[];
   table: Table;
-  waiter_staff?: User;
+  waiter?: User;
   kitchen_staff?: User;
   cashier?: User;
 };
@@ -26,3 +26,22 @@ export type PaymentStatus = Database['public']['Enums']['payment_status'];
 export type PaymentMethod = Database['public']['Enums']['payment_method'];
 export type TableStatus = Database['public']['Enums']['table_status'];
 export type UserRole = Database['public']['Enums']['user_role'];
+
+// Helper type for converting snake_case to camelCase
+type CamelCase<S extends string> = S extends `${infer P}_${infer Q}`
+  ? `${P}${Capitalize<CamelCase<Q>>}`
+  : S;
+
+// Helper type for converting object keys from snake_case to camelCase
+export type CamelCaseKeys<T> = {
+  [K in keyof T as CamelCase<string & K>]: T[K] extends object
+    ? CamelCaseKeys<T[K]>
+    : T[K];
+};
+
+// Export camelCase versions of types for frontend use
+export type CamelCaseUser = CamelCaseKeys<User>;
+export type CamelCaseOrder = CamelCaseKeys<Order>;
+export type CamelCaseMenuItem = CamelCaseKeys<MenuItem>;
+export type CamelCaseTable = CamelCaseKeys<Table>;
+export type CamelCasePayment = CamelCaseKeys<Payment>;

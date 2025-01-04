@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { getDB } from '../lib/db';
 import type { User } from '../lib/db/schema';
+import { supabase } from '../integrations/supabase/client';
 
 interface AuthState {
   user: User | null;
@@ -61,48 +62,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    // Check for stored auth on mount
-    const storedUser = localStorage.getItem('user');
-    try {
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-        if (user && user.id) {
-          dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          try {
+            const user = await getDB.get('users', session.user.id);
+            if (user) {
+              dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+            }
+          } catch (error) {
+            console.error('Error fetching user:', error);
+            dispatch({ type: 'LOGIN_ERROR', payload: 'Failed to fetch user data' });
+          }
         } else {
-          localStorage.removeItem('user');
+          dispatch({ type: 'LOGOUT' });
         }
       }
-    } catch (error) {
-      console.error('Failed to parse stored user:', error);
-      localStorage.removeItem('user');
-    }
-    dispatch({ type: 'SET_LOADING', payload: false });
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string): Promise<User | null> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const db = await getDB();
-      const users = await db.getAll('users');
-      const user = users.find(u => u.email === email);
+      const { data: { user }, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-      if (!user) {
-        throw new Error('Invalid credentials');
-      }
+      if (error) throw error;
+      if (!user) throw new Error('No user returned from auth');
 
-      // In a real app, we would verify the password hash here
-      // For demo purposes, we'll just simulate successful login
-      localStorage.setItem('user', JSON.stringify(user));
-      dispatch({ type: 'LOGIN_SUCCESS', payload: user });
-      return user;
+      const dbUser = await getDB.get('users', user.id);
+      dispatch({ type: 'LOGIN_SUCCESS', payload: dbUser });
+      return dbUser;
     } catch (error) {
-      dispatch({ type: 'LOGIN_ERROR', payload: (error as Error).message });
+      console.error('Login error:', error);
+      dispatch({ type: 'LOGIN_ERROR', payload: 'Invalid credentials' });
       return null;
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('user');
+  const logout = async () => {
+    await supabase.auth.signOut();
     dispatch({ type: 'LOGOUT' });
   };
 
