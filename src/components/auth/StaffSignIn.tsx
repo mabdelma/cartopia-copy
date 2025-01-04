@@ -38,9 +38,18 @@ export function StaffSignIn() {
         }
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Login failed';
+      let message = 'Login failed';
+      if (error instanceof Error) {
+        if (error.message.includes('Email not confirmed')) {
+          message = 'Please check your email and confirm your account before signing in';
+          toast.error(message, {
+            description: 'Check your inbox and spam folder for the confirmation email'
+          });
+        } else if (error.message.includes('Invalid login credentials')) {
+          message = 'Invalid email or password';
+        }
+      }
       setFormError(message);
-      toast.error(message);
       console.error('Login failed:', error);
     } finally {
       setIsSubmitting(false);
