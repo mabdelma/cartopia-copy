@@ -5,15 +5,20 @@ import { AuthLayout } from './AuthLayout';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ChefHat, UserCircle, DollarSign, Shield } from 'lucide-react';
 import { toast } from 'sonner';
+import { ErrorMessage } from '../ui/ErrorMessage';
 
 export function StaffSignIn() {
   const navigate = useNavigate();
   const { login, state } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
     try {
       const user = await login(email, password);
       if (user) {
@@ -29,6 +34,8 @@ export function StaffSignIn() {
       const message = error instanceof Error ? error.message : 'Login failed';
       toast.error(message);
       console.error('Login failed:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -62,11 +69,7 @@ export function StaffSignIn() {
       </div>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        {state.error && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4">
-            <p className="text-sm text-red-700">{state.error}</p>
-          </div>
-        )}
+        {state.error && <ErrorMessage message={state.error} />}
 
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">
@@ -82,6 +85,7 @@ export function StaffSignIn() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              disabled={isSubmitting}
             />
           </div>
         </div>
@@ -100,6 +104,7 @@ export function StaffSignIn() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              disabled={isSubmitting}
             />
           </div>
         </div>
@@ -107,10 +112,10 @@ export function StaffSignIn() {
         <div>
           <button
             type="submit"
-            disabled={state.loading}
+            disabled={isSubmitting || state.loading}
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#8B4513] hover:bg-[#5C4033] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#8B4513] disabled:opacity-50"
           >
-            {state.loading ? <LoadingSpinner /> : 'Sign in'}
+            {(isSubmitting || state.loading) ? <LoadingSpinner /> : 'Sign in'}
           </button>
         </div>
 
@@ -119,6 +124,7 @@ export function StaffSignIn() {
             type="button"
             onClick={() => navigate('/staff/signup')}
             className="font-medium text-[#8B4513] hover:text-[#5C4033]"
+            disabled={isSubmitting}
           >
             New staff member? Sign up
           </button>

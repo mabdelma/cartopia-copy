@@ -92,17 +92,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string): Promise<User | null> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const { data: { user: authUser }, error: authError } = 
-        await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
       if (authError) throw authError;
-      if (!authUser) throw new Error('No user returned from auth');
+      if (!data.user) throw new Error('No user returned from auth');
 
       const db = await getDB();
-      const dbUser = await db.get('users', authUser.id);
+      const dbUser = await db.get('users', data.user.id);
       
       if (!dbUser) throw new Error('User not found in database');
 
