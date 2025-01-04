@@ -30,7 +30,7 @@ export function AdminProfile() {
       const db = await getDB();
       const updatedUser = {
         ...state.user,
-        profileImage: imageUrl
+        profile_image: imageUrl
       };
       
       await db.put('users', updatedUser);
@@ -71,7 +71,7 @@ export function AdminProfile() {
         ...state.user,
         name: formData.name,
         email: formData.email,
-        lastActive: new Date()
+        last_active: new Date()
       };
       
       await db.put('users', updatedUser);
@@ -95,9 +95,9 @@ export function AdminProfile() {
           <div className="absolute -bottom-16 left-6">
             <div className="relative">
               <div className="w-32 h-32 rounded-full border-4 border-white bg-gray-200 overflow-hidden">
-                {state.user.profileImage ? (
+                {state.user.profile_image ? (
                   <img
-                    src={state.user.profileImage}
+                    src={state.user.profile_image}
                     alt={state.user.name}
                     className="w-full h-full object-cover"
                   />

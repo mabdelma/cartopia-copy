@@ -73,13 +73,13 @@ export function Analytics() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todaysSales = orders
-        .filter(order => new Date(order.createdAt) >= today)
+        .filter(order => new Date(order.created_at) >= today)
         .reduce((sum, order) => sum + order.total, 0);
 
       // Calculate average preparation time
       const prepTimes = orders.map(order => {
-        const created = new Date(order.createdAt).getTime();
-        const updated = new Date(order.updatedAt).getTime();
+        const created = new Date(order.created_at).getTime();
+        const updated = new Date(order.updated_at).getTime();
         return (updated - created) / 1000 / 60; // minutes
       });
       const avgPrepTime = prepTimes.length > 0 
@@ -98,15 +98,16 @@ export function Analytics() {
 
       // Calculate delayed orders
       const delayedOrders = orders.filter(order => {
-        const orderAge = (Date.now() - new Date(order.createdAt).getTime()) / 1000 / 60;
-        return orderAge > 15 && order.status !== 'delivered' && order.status !== 'paid';
+        const orderAge = (Date.now() - new Date(order.created_at).getTime()) / 1000 / 60;
+        return orderAge > 15 && order.status !== 'delivered' && order.payment_status !== 'paid';
       }).length;
+
       // Calculate popular items
       const itemCounts = new Map<string, number>();
       orders.forEach(order => {
         order.items.forEach(item => {
-          const count = itemCounts.get(item.menuItemId) || 0;
-          itemCounts.set(item.menuItemId, count + item.quantity);
+          const count = itemCounts.get(item.menu_item_id) || 0;
+          itemCounts.set(item.menu_item_id, count + item.quantity);
         });
       });
 

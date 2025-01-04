@@ -57,3 +57,36 @@ export const isOrderWithDetails = (order: any): order is OrderWithDetails => {
 export const isOrderWithItems = (order: any): order is OrderWithItems => {
   return order && Array.isArray(order.items);
 };
+
+// Helper functions for converting between snake_case and camelCase
+export const toCamelCase = <T extends object>(obj: T): CamelCaseKeys<T> => {
+  if (Array.isArray(obj)) {
+    return obj.map((item) => toCamelCase(item)) as any;
+  }
+  
+  if (obj === null || typeof obj !== 'object') {
+    return obj as any;
+  }
+
+  return Object.keys(obj).reduce((acc, key) => {
+    const camelKey = key.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+    acc[camelKey as keyof typeof acc] = toCamelCase((obj as any)[key]);
+    return acc;
+  }, {} as CamelCaseKeys<T>);
+};
+
+export const toSnakeCase = <T extends object>(obj: T): any => {
+  if (Array.isArray(obj)) {
+    return obj.map((item) => toSnakeCase(item));
+  }
+  
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  return Object.keys(obj).reduce((acc, key) => {
+    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    acc[snakeKey] = toSnakeCase((obj as any)[key]);
+    return acc;
+  }, {} as any);
+};

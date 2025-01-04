@@ -53,9 +53,9 @@ export function Header({ username = 'Admin User' }: HeaderProps) {
             >
               <span className="text-sm font-medium text-gray-700">{state.user?.name || username}</span>
               <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#F5DEB3]">
-                {state.user?.profileImage ? (
+                {state.user?.profile_image ? (
                   <img
-                    src={state.user.profileImage}
+                    src={state.user.profile_image}
                     alt={state.user.name}
                     className="w-full h-full object-cover"
                   />
