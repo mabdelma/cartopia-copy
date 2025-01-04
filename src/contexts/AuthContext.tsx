@@ -66,7 +66,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (event, session) => {
         if (session?.user) {
           try {
-            const user = await getDB.get('users', session.user.id);
+            const db = await getDB();
+            const user = await db.get('users', session.user.id);
             if (user) {
               dispatch({ type: 'LOGIN_SUCCESS', payload: user });
             }
@@ -88,15 +89,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string): Promise<User | null> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      const { data: { user }, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      // First authenticate with Supabase
+      const { data: { user: authUser }, error: authError } = 
+        await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
 
-      if (error) throw error;
-      if (!user) throw new Error('No user returned from auth');
+      if (authError) throw authError;
+      if (!authUser) throw new Error('No user returned from auth');
 
-      const dbUser = await getDB.get('users', user.id);
+      // Then get the user data from local DB
+      const db = await getDB();
+      const dbUser = await db.get('users', authUser.id);
+      
+      if (!dbUser) {
+        throw new Error('User not found in database');
+      }
+
       dispatch({ type: 'LOGIN_SUCCESS', payload: dbUser });
       return dbUser;
     } catch (error) {

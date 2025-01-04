@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getDB } from '../../lib/db';
 import { AuthLayout } from './AuthLayout';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
+import { supabase } from '../../integrations/supabase/client';
 
 export function StaffSignUp() {
   const navigate = useNavigate();
@@ -21,17 +22,26 @@ export function StaffSignUp() {
     setError(null);
 
     try {
+      // First create the user in Supabase auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('No user returned from auth signup');
+
       const db = await getDB();
       
-      // Check if email already exists
+      // Check if email already exists in local DB
       const users = await db.getAll('users');
       if (users.some(user => user.email === formData.email)) {
         throw new Error('Email already exists');
       }
 
-      // Create new user
+      // Create new user in local DB with Supabase auth ID
       await db.add('users', {
-        id: crypto.randomUUID(),
+        id: authData.user.id, // Use Supabase user ID
         name: formData.name,
         email: formData.email,
         role: formData.role
@@ -40,6 +50,7 @@ export function StaffSignUp() {
       // Redirect to sign in
       navigate('/staff/signin');
     } catch (err) {
+      console.error('Signup error:', err);
       setError((err as Error).message);
     } finally {
       setLoading(false);
@@ -158,4 +169,4 @@ export function StaffSignUp() {
       </form>
     </AuthLayout>
   );
-}
+};
