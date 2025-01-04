@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { getDB } from '../lib/db';
 import type { User } from '../lib/db/schema';
 import { supabase } from '../integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface AuthState {
   user: User | null;
@@ -90,7 +91,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<User | null> => {
+    if (!email || !password) {
+      throw new Error('Please enter both email and password');
+    }
+
     dispatch({ type: 'SET_LOADING', payload: true });
+    
     try {
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
