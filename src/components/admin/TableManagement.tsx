@@ -10,6 +10,7 @@ import { TableList } from './table/TableList';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorMessage } from '../ui/ErrorMessage';
 import { QrCode, Settings, Trash2 } from 'lucide-react';
+import { useToast } from '../ui/use-toast';
 
 export function TableManagement() {
   const [tables, setTables] = useState<Table[]>([]);
@@ -26,6 +27,7 @@ export function TableManagement() {
     occupancyRate: 0,
     totalTurnovers: 0
   });
+  const { toast } = useToast();
 
   useEffect(() => {
     loadTables();
@@ -76,31 +78,49 @@ export function TableManagement() {
       setError(null);
     } catch (err) {
       console.error('Failed to load tables:', err);
-      setError('Failed to load table data');
+      setError('Failed to load table data. Please try again later.');
+      toast({
+        variant: "destructive",
+        title: "Error loading tables",
+        description: "Please check your connection and try again."
+      });
     } finally {
       setLoading(false);
     }
   }
 
   async function saveTable(table: Table) {
-    const db = await getDB();
-    const isNew = !table.qrCode;
-    
-    // Ensure number and capacity are valid integers
-    table.number = Math.max(1, Math.floor(Number(table.number)));
-    table.capacity = Math.max(1, Math.floor(Number(table.capacity)));
-    
-    // Generate new QR code if table is new or number changed
-    if (isNew || (
-      !isNew && 
-      tables.find(t => t.id === table.id)?.number !== table.number
-    )) {
-      table.qrCode = await generateQRCode(`table/${table.id}`);
+    try {
+      const db = await getDB();
+      const isNew = !table.qrCode;
+      
+      // Ensure number and capacity are valid integers
+      table.number = Math.max(1, Math.floor(Number(table.number)));
+      table.capacity = Math.max(1, Math.floor(Number(table.capacity)));
+      
+      // Generate new QR code if table is new or number changed
+      if (isNew || (
+        !isNew && 
+        tables.find(t => t.id === table.id)?.number !== table.number
+      )) {
+        table.qrCode = await generateQRCode(`table/${table.id}`);
+      }
+      
+      await db.put('tables', table);
+      setEditingTable(null);
+      loadTables();
+      toast({
+        title: isNew ? "Table created" : "Table updated",
+        description: `Table ${table.number} has been ${isNew ? 'created' : 'updated'} successfully.`
+      });
+    } catch (error) {
+      console.error('Failed to save table:', error);
+      toast({
+        variant: "destructive",
+        title: "Error saving table",
+        description: "Please check your connection and try again."
+      });
     }
-    
-    await db.put('tables', table);
-    setEditingTable(null);
-    loadTables();
   }
 
   async function handleDeleteTable(table: Table) {
@@ -121,8 +141,18 @@ export function TableManagement() {
       await db.delete('tables', table.id);
       setDeletingTable(null);
       loadTables();
+      toast({
+        title: "Table deleted",
+        description: `Table ${table.number} has been deleted successfully.`
+      });
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to delete table');
+      const message = error instanceof Error ? error.message : 'Failed to delete table';
+      setError(message);
+      toast({
+        variant: "destructive",
+        title: "Error deleting table",
+        description: message
+      });
     }
   }
 
