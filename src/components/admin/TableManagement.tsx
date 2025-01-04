@@ -65,7 +65,7 @@ export function TableManagement() {
         : 0;
 
       const occupiedTables = allTables.filter(t => t.status === 'occupied').length;
-      const occupancyRate = occupiedTables / allTables.length;
+      const occupancyRate = allTables.length > 0 ? occupiedTables / allTables.length : 0;
 
       setTables(allTables.sort((a, b) => a.number - b.number));
       setActiveOrders(activeOrdersMap);

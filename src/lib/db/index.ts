@@ -73,7 +73,7 @@ class DB {
         .from(table)
         .select('*')
         .eq('id', id)
-        .maybeSingle();
+        .maybeSingle();  // Changed from .single() to .maybeSingle()
 
       if (error) {
         console.error(`Error fetching from ${table}:`, error);
