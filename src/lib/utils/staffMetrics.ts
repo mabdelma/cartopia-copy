@@ -1,5 +1,5 @@
 import { supabase } from '../../integrations/supabase/client';
-import type { User } from '../db/schema';
+import type { User, Order } from '../db/schema';
 
 export async function getStaffMetrics(userId: string) {
   const { data: orders, error: ordersError } = await supabase
@@ -30,6 +30,28 @@ export async function getStaffMetrics(userId: string) {
   };
 
   return metrics;
+}
+
+export async function updateStaffMetrics(userId: string, order?: Order) {
+  try {
+    const metrics = await getStaffMetrics(userId);
+    
+    // Update user metrics in the database if needed
+    const { error } = await supabase
+      .from('users')
+      .update({
+        last_active: new Date().toISOString(),
+        // Add any other metric updates here
+      })
+      .eq('id', userId);
+
+    if (error) throw error;
+    
+    return metrics;
+  } catch (error) {
+    console.error('Failed to update staff metrics:', error);
+    throw error;
+  }
 }
 
 function calculateAverageServiceTime(orders: any[]): number {

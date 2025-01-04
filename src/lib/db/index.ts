@@ -39,9 +39,16 @@ export async function getAll(
   return data;
 }
 
-export async function put<T extends { id: string }>(
+export async function put(table: 'menu_categories', item: MenuCategory): Promise<MenuCategory>;
+export async function put(table: 'menu_items', item: MenuItem): Promise<MenuItem>;
+export async function put(table: 'orders', item: Order): Promise<Order>;
+export async function put(table: 'order_items', item: OrderItem): Promise<OrderItem>;
+export async function put(table: 'payments', item: Payment): Promise<Payment>;
+export async function put(table: 'tables', item: Table): Promise<Table>;
+export async function put(table: 'users', item: User): Promise<User>;
+export async function put(
   table: 'menu_categories' | 'menu_items' | 'orders' | 'order_items' | 'payments' | 'tables' | 'users',
-  item: T
+  item: MenuCategory | MenuItem | Order | OrderItem | Payment | Table | User
 ) {
   const { data, error } = await supabase
     .from(table)
