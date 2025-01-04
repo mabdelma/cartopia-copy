@@ -13,13 +13,20 @@ export function StaffSignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
     
+    setFormError(null);
     setIsSubmitting(true);
+
     try {
+      if (!email || !password) {
+        throw new Error('Please enter both email and password');
+      }
+
       const user = await login(email, password);
       if (user) {
         if (user.role === 'admin') {
@@ -32,6 +39,7 @@ export function StaffSignIn() {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Login failed';
+      setFormError(message);
       toast.error(message);
       console.error('Login failed:', error);
     } finally {
@@ -69,7 +77,9 @@ export function StaffSignIn() {
       </div>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
-        {state.error && <ErrorMessage message={state.error} />}
+        {(formError || state.error) && (
+          <ErrorMessage message={formError || state.error} />
+        )}
 
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700">

@@ -97,7 +97,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        let errorMessage = 'Invalid login credentials';
+        if (authError.message.includes('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password';
+        } else if (authError.message.includes('Email not confirmed')) {
+          errorMessage = 'Please verify your email address';
+        }
+        throw new Error(errorMessage);
+      }
+
       if (!data.user) throw new Error('No user returned from auth');
 
       const db = await getDB();
