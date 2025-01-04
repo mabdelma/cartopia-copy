@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle } from 'lucide-react';
-import { getDB } from '../../lib/db';
 import type { Table, Order } from '../../lib/db/schema';
+import { getDB } from '../../lib/db';
 import { QRCodeModal } from './QRCodeModal';
 import { generateQRCode } from '../../lib/utils/qrcode';
 import { TableEfficiencyStats } from './table/TableEfficiencyStats';
@@ -9,8 +9,7 @@ import { TableFilters } from './table/TableFilters';
 import { TableList } from './table/TableList';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorMessage } from '../ui/ErrorMessage';
-import { QrCode, Settings, Trash2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '../../hooks/use-toast';
 
 export function TableManagement() {
   const [tables, setTables] = useState<Table[]>([]);
