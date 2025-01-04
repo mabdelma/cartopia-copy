@@ -4,28 +4,15 @@ import type { User, Order } from '../db/schema';
 export async function getStaffMetrics(userId: string) {
   const { data: orders, error: ordersError } = await supabase
     .from('orders')
-    .select(`
-      *,
-      order_items (
-        *,
-        menu_items (*)
-      )
-    `)
-    .or(`waiter_staff_id.eq.${userId},kitchen_staff_id.eq.${userId},cashier_id.eq.${userId}`);
+    .select('*')
+    .or(`kitchen_staff_id.eq.${userId},waiter_staff_id.eq.${userId},cashier_id.eq.${userId}`);
 
   if (ordersError) throw ordersError;
-
-  const { data: payments, error: paymentsError } = await supabase
-    .from('payments')
-    .select('*')
-    .in('order_id', orders?.map(o => o.id) || []);
-
-  if (paymentsError) throw paymentsError;
 
   const metrics = {
     ordersHandled: orders?.length || 0,
     avgServiceTime: calculateAverageServiceTime(orders || []),
-    totalSales: calculateTotalSales(payments || []),
+    totalSales: calculateTotalSales(orders || []),
     rating: calculateRating(orders || [])
   };
 
@@ -36,7 +23,7 @@ export async function updateStaffMetrics(userId: string, order?: Order) {
   try {
     const metrics = await getStaffMetrics(userId);
     
-    // Update user metrics in the database if needed
+    // Update user metrics in the database
     const { error } = await supabase
       .from('users')
       .update({
@@ -57,30 +44,25 @@ export async function updateStaffMetrics(userId: string, order?: Order) {
 function calculateAverageServiceTime(orders: any[]): number {
   if (!orders.length) return 0;
   
-  const serviceTimes = orders
-    .filter(order => order.completed_at)
-    .map(order => {
-      const start = new Date(order.created_at);
-      const end = new Date(order.completed_at);
-      return (end.getTime() - start.getTime()) / (1000 * 60); // Convert to minutes
-    });
+  const totalTime = orders.reduce((sum, order) => {
+    const start = new Date(order.created_at).getTime();
+    const end = order.completed_at 
+      ? new Date(order.completed_at).getTime()
+      : Date.now();
+    return sum + (end - start);
+  }, 0);
 
-  return serviceTimes.length 
-    ? serviceTimes.reduce((sum, time) => sum + time, 0) / serviceTimes.length
-    : 0;
+  return Math.round(totalTime / orders.length / 1000 / 60); // Convert to minutes
 }
 
-function calculateTotalSales(payments: any[]): number {
-  return payments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+function calculateTotalSales(orders: any[]): number {
+  return orders.reduce((sum, order) => sum + (order.total || 0), 0);
 }
 
 function calculateRating(orders: any[]): number {
-  if (!orders.length) return 0;
+  const completedOrders = orders.filter(o => o.completed_at);
+  if (!completedOrders.length) return 5;
   
-  const completedOrders = orders.filter(order => order.completed_at);
-  const complaintsCount = orders.filter(order => order.has_complaints).length;
-  
-  if (!completedOrders.length) return 0;
-  
-  return Math.max(0, Math.min(1, 1 - (complaintsCount / completedOrders.length)));
+  const complaintsCount = orders.filter(o => o.has_complaints).length;
+  return Math.max(1, 5 - (complaintsCount / completedOrders.length) * 5);
 }
