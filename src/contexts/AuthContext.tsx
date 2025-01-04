@@ -18,7 +18,7 @@ type AuthAction =
 const AuthContext = createContext<{
   state: AuthState;
   login: (email: string, password: string) => Promise<User | null>;
-  logout: () => void;
+  logout: () => Promise<void>;
 } | null>(null);
 
 function authReducer(state: AuthState, action: AuthAction): AuthState {
@@ -80,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           dispatch({ type: 'LOGOUT' });
         }
+        dispatch({ type: 'SET_LOADING', payload: false });
       }
     );
 
@@ -99,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (authError) {
         console.error('Auth error:', authError);
-        throw new Error('Invalid credentials');
+        throw new Error(authError.message);
       }
 
       if (!authUser) {
