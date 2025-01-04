@@ -5,6 +5,7 @@ import { getDB } from '../../lib/db';
 import { uploadImage } from '../../lib/utils/imageUpload';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorMessage } from '../ui/ErrorMessage';
+import { toISOString } from '../../lib/utils/dateUtils';
 
 export function AdminProfile() {
   const { state, login } = useAuth();
@@ -71,7 +72,7 @@ export function AdminProfile() {
         ...state.user,
         name: formData.name,
         email: formData.email,
-        last_active: new Date()
+        last_active: toISOString(new Date())
       };
       
       await db.put('users', updatedUser);

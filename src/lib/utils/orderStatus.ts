@@ -1,5 +1,6 @@
 import { supabase } from '../../integrations/supabase/client';
 import type { Order, OrderStatus } from '../db/schema';
+import { toISOString } from './dateUtils';
 
 const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   'pending': ['preparing'],
@@ -29,8 +30,8 @@ export async function updateOrderStatus(orderId: string, newStatus: OrderStatus)
     .from('orders')
     .update({ 
       status: newStatus,
-      updated_at: new Date().toISOString(),
-      completed_at: newStatus === 'delivered' ? new Date().toISOString() : null
+      updated_at: toISOString(new Date()),
+      completed_at: newStatus === 'delivered' ? toISOString(new Date()) : null
     })
     .eq('id', orderId)
     .select()

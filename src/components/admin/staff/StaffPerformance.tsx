@@ -7,6 +7,7 @@ import { generateStaffReport } from '../../../lib/utils/exportReports';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
 import { ErrorMessage } from '../../ui/ErrorMessage';
 import { FileDown } from 'lucide-react';
+import { toISOString } from '../../../lib/utils/dateUtils';
 
 interface StaffMetrics {
   ordersHandled: number;

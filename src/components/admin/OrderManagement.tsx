@@ -7,6 +7,7 @@ import { OrderList } from './order/OrderList';
 import { OrderDetails } from '../shared/OrderDetails';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorMessage } from '../ui/ErrorMessage';
+import { toISOString } from '../../lib/utils/dateUtils';
 
 export function OrderManagement() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -67,7 +68,7 @@ export function OrderManagement() {
       await db.put('orders', {
         ...order,
         status,
-        updatedAt: new Date()
+        updatedAt: toISOString(new Date())
       });
       loadOrders();
     } catch (error) {

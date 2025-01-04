@@ -1,155 +1,174 @@
-import React from 'react';
-import { ShoppingBag, Minus, Plus, Trash2, AlertCircle } from 'lucide-react';
-import { useCart } from '../../contexts/CartContext';
-import { getDB } from '../../lib/db';
-import { generateOrderId } from '../../lib/utils/orderUtils';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useCart } from '../../contexts/CartContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { getDB } from '../../lib/db';
+import type { Order } from '../../lib/db/schema';
+import { toISOString } from '../../lib/utils/dateUtils';
+import { ShoppingCart, Trash2, Plus, Minus } from 'lucide-react';
 
 export function Cart() {
-  const { state, dispatch } = useCart();
+  const { state: cartState, dispatch: cartDispatch } = useCart();
+  const { state: authState } = useAuth();
   const navigate = useNavigate();
-  const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = React.useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-  async function handleCheckout() {
-    if (state.items.length === 0) return;
-    
-    setIsProcessing(true);
-    setCheckoutError(null);
-    
+  const total = cartState.items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+
+  function handleQuantityChange(itemId: string, change: number) {
+    const item = cartState.items.find(i => i.id === itemId);
+    if (!item) return;
+
+    const newQuantity = item.quantity + change;
+    if (newQuantity < 1) {
+      cartDispatch({ type: 'REMOVE_ITEM', payload: itemId });
+    } else {
+      cartDispatch({
+        type: 'UPDATE_QUANTITY',
+        payload: { id: itemId, quantity: newQuantity }
+      });
+    }
+  }
+
+  async function handleCreateOrder() {
+    if (!authState.user || !cartState.tableId) return;
+
     try {
       const db = await getDB();
-      
-      const order = {
-        id: generateOrderId(),
-        tableId: '1', // Default table for now
-        userId: '1', // Default user for now
-        status: 'pending',
-        items: state.items.map(item => ({
+      const orderData: Order = {
+        id: crypto.randomUUID(),
+        tableId: cartState.tableId,
+        items: cartState.items.map(item => ({
           id: crypto.randomUUID(),
-          menuItemId: item.menuItem.id,
+          menuItemId: item.id,
           quantity: item.quantity,
-          notes: item.comment || undefined
+          notes: item.notes || null
         })),
-        total: state.total,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        total,
+        status: 'pending',
+        paymentStatus: 'unpaid',
+        createdAt: toISOString(new Date()),
+        updatedAt: toISOString(new Date()),
+        waiterStaffId: authState.user.id,
+        kitchenStaffId: null,
+        cashierId: null,
+        hasComplaints: false
       };
-      
-      await db.add('orders', order);
-      
-      // Clear the cart and redirect to orders page
-      dispatch({ type: 'CLEAR_CART' });
-      navigate('/orders');
+
+      await db.put('orders', orderData);
+      cartDispatch({ type: 'CLEAR_CART' });
+      navigate('/restaurant/order-confirmation');
     } catch (error) {
-      console.error('Checkout failed:', error);
-      setCheckoutError('Failed to process your order. Please try again.');
-    } finally {
-      setIsProcessing(false);
+      console.error('Failed to create order:', error);
     }
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-gray-900 mb-8">Shopping Cart</h2>
-      
-      {checkoutError && (
-        <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-400 text-red-700">
-          <div className="flex items-center">
-            <AlertCircle className="h-5 w-5 mr-2" />
-            <p>{checkoutError}</p>
-          </div>
-        </div>
-      )}
-      
-      <div className="bg-white rounded-lg shadow p-6">
-        {state.items.length === 0 ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <ShoppingBag className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">Cart is empty</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Start adding some items to your cart
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {state.items.map((item) => (
-              <div key={item.menuItem.id} className="flex items-center space-x-4 py-4 border-b">
-                <div className="w-20 h-20 flex-shrink-0">
-                  {item.menuItem.image ? (
-                    <img
-                      src={item.menuItem.image}
-                      alt={item.menuItem.name}
-                      className="w-full h-full object-cover rounded-md"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-200 rounded-md" />
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-medium text-gray-900">{item.menuItem.name}</h3>
-                  <p className="text-sm text-gray-500">${item.menuItem.price.toFixed(2)}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => {
-                      if (item.quantity > 1) {
-                        dispatch({
-                          type: 'UPDATE_QUANTITY',
-                          payload: { id: item.menuItem.id, quantity: item.quantity - 1 }
-                        });
-                      } else {
-                        dispatch({ type: 'REMOVE_ITEM', payload: item.menuItem.id });
-                      }
-                    }}
-                    className="p-1 rounded-md hover:bg-gray-100"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <span className="w-8 text-center">{item.quantity}</span>
-                  <button
-                    onClick={() => dispatch({
-                      type: 'UPDATE_QUANTITY',
-                      payload: { id: item.menuItem.id, quantity: item.quantity + 1 }
-                    })}
-                    className="p-1 rounded-md hover:bg-gray-100"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => dispatch({ type: 'REMOVE_ITEM', payload: item.menuItem.id })}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded-md ml-4"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-            
-            <div className="pt-4 border-t">
-              <div className="flex justify-between text-lg font-medium">
-                <span>Total</span>
-                <span>${state.total.toFixed(2)}</span>
-              </div>
-              <button
-                onClick={() => dispatch({ type: 'CLEAR_CART' })}
-                className="mt-4 w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700"
-              >
-                Clear Cart
-              </button>
-              <button
-                onClick={handleCheckout}
-                disabled={isProcessing}
-                className="mt-4 w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700"
-              >
-                {isProcessing ? 'Processing...' : 'Proceed to Checkout'}
-              </button>
-            </div>
-          </div>
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="fixed bottom-4 right-4 z-50 bg-[#8B4513] text-white p-4 rounded-full shadow-lg hover:bg-[#5C4033] transition-colors"
+      >
+        <ShoppingCart className="h-6 w-6" />
+        {cartState.items.length > 0 && (
+          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center">
+            {cartState.items.length}
+          </span>
         )}
-      </div>
+      </button>
+
+      {isOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="fixed bottom-20 right-4 w-96 bg-white rounded-lg shadow-xl z-50 max-h-[80vh] overflow-y-auto">
+            <div className="p-4 border-b">
+              <h2 className="text-lg font-semibold text-gray-900">Your Cart</h2>
+              {cartState.tableId && (
+                <p className="text-sm text-gray-500">Table {cartState.tableId}</p>
+              )}
+            </div>
+
+            {cartState.items.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                Your cart is empty
+              </div>
+            ) : (
+              <>
+                <div className="divide-y">
+                  {cartState.items.map((item) => (
+                    <div key={item.id} className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium text-gray-900">
+                            {item.name}
+                          </h3>
+                          {item.notes && (
+                            <p className="text-sm text-gray-500 mt-1">
+                              Note: {item.notes}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-gray-900">
+                          ${(item.price * item.quantity).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleQuantityChange(item.id, -1)}
+                            className="p-1 text-gray-400 hover:text-gray-500"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <span className="text-gray-600">{item.quantity}</span>
+                          <button
+                            onClick={() => handleQuantityChange(item.id, 1)}
+                            className="p-1 text-gray-400 hover:text-gray-500"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <button
+                          onClick={() =>
+                            cartDispatch({
+                              type: 'REMOVE_ITEM',
+                              payload: item.id
+                            })
+                          }
+                          className="p-1 text-red-400 hover:text-red-500"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-4 border-t">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="font-medium text-gray-900">Total</span>
+                    <span className="text-xl font-semibold text-gray-900">
+                      ${total.toFixed(2)}
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleCreateOrder}
+                    className="w-full bg-[#8B4513] text-white py-2 px-4 rounded-md hover:bg-[#5C4033] transition-colors"
+                  >
+                    Place Order
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
