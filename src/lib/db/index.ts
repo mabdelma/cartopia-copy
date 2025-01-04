@@ -4,21 +4,6 @@ import type {
   Payment, Table, User 
 } from './schema';
 
-export async function getAll(table: 'menu_categories'): Promise<MenuCategory[]>;
-export async function getAll(table: 'menu_items'): Promise<MenuItem[]>;
-export async function getAll(table: 'orders'): Promise<Order[]>;
-export async function getAll(table: 'order_items'): Promise<OrderItem[]>;
-export async function getAll(table: 'payments'): Promise<Payment[]>;
-export async function getAll(table: 'tables'): Promise<Table[]>;
-export async function getAll(table: 'users'): Promise<User[]>;
-export async function getAll(
-  table: 'menu_categories' | 'menu_items' | 'orders' | 'order_items' | 'payments' | 'tables' | 'users'
-) {
-  const { data, error } = await supabase.from(table).select();
-  if (error) throw error;
-  return data;
-}
-
 export async function get(table: 'menu_categories', id: string): Promise<MenuCategory>;
 export async function get(table: 'menu_items', id: string): Promise<MenuItem>;
 export async function get(table: 'orders', id: string): Promise<Order>;
@@ -35,6 +20,21 @@ export async function get(
     .select()
     .eq('id', id)
     .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getAll(table: 'menu_categories'): Promise<MenuCategory[]>;
+export async function getAll(table: 'menu_items'): Promise<MenuItem[]>;
+export async function getAll(table: 'orders'): Promise<Order[]>;
+export async function getAll(table: 'order_items'): Promise<OrderItem[]>;
+export async function getAll(table: 'payments'): Promise<Payment[]>;
+export async function getAll(table: 'tables'): Promise<Table[]>;
+export async function getAll(table: 'users'): Promise<User[]>;
+export async function getAll(
+  table: 'menu_categories' | 'menu_items' | 'orders' | 'order_items' | 'payments' | 'tables' | 'users'
+) {
+  const { data, error } = await supabase.from(table).select();
   if (error) throw error;
   return data;
 }
@@ -61,10 +61,4 @@ export async function remove(
     .delete()
     .eq('id', id);
   if (error) throw error;
-}
-
-// Remove initDB since we're using Supabase now
-export async function initDB() {
-  // No initialization needed for Supabase
-  return;
 }

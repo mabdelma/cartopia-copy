@@ -11,8 +11,8 @@ export type User = Database['public']['Tables']['users']['Row'];
 export type OrderWithDetails = Order & {
   items: (OrderItem & { menuItem: MenuItem })[];
   table: Table;
-  waiterStaff?: User;
-  kitchenStaff?: User;
+  waiter_staff?: User;
+  kitchen_staff?: User;
   cashier?: User;
 };
 

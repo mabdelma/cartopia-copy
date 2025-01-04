@@ -1,23 +1,23 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import type { UserRole } from '../../lib/db/schema';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles: Array<'kitchen' | 'waiter' | 'admin'>;
+  allowedRoles: UserRole[];
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { state } = useAuth();
+  const location = useLocation();
 
   if (state.loading) {
     return <div>Loading...</div>;
   }
 
-  if (!state.user || !allowedRoles.includes(state.user.role as any)) {
-    // Redirect to appropriate sign in page based on roles
-    const redirectPath = allowedRoles.includes('admin') ? '/admin/signin' : '/staff/signin';
-    return <Navigate to={redirectPath} replace />;
+  if (!state.user || !allowedRoles.includes(state.user.role)) {
+    return <Navigate to="/staff/signin" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
