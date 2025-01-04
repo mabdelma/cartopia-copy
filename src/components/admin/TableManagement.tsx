@@ -10,7 +10,7 @@ import { TableList } from './table/TableList';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorMessage } from '../ui/ErrorMessage';
 import { QrCode, Settings, Trash2 } from 'lucide-react';
-import { useToast } from '../ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export function TableManagement() {
   const [tables, setTables] = useState<Table[]>([]);
