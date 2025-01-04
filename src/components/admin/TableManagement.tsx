@@ -7,6 +7,8 @@ import { generateQRCode } from '../../lib/utils/qrcode';
 import { TableEfficiencyStats } from './table/TableEfficiencyStats';
 import { TableFilters } from './table/TableFilters';
 import { TableList } from './table/TableList';
+import { TableForm } from './table/TableForm';
+import { DeleteTableDialog } from './table/DeleteTableDialog';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorMessage } from '../ui/ErrorMessage';
 import { useToast } from '../../hooks/use-toast';
@@ -30,7 +32,6 @@ export function TableManagement() {
 
   useEffect(() => {
     loadTables();
-    // Refresh data every minute
     const interval = setInterval(loadTables, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -44,7 +45,6 @@ export function TableManagement() {
         db.getAll('orders')
       ]);
 
-      // Get active orders for occupied tables
       const activeOrdersMap = allOrders.reduce((acc, order) => {
         if (order.status !== 'delivered' && order.status !== 'paid') {
           acc[order.tableId] = order;
@@ -52,12 +52,11 @@ export function TableManagement() {
         return acc;
       }, {} as Record<string, Order>);
 
-      // Calculate efficiency metrics
       const completedOrders = allOrders.filter(o => o.status === 'paid');
       const turnoverTimes = completedOrders.map(order => {
         const start = new Date(order.createdAt).getTime();
         const end = new Date(order.updatedAt).getTime();
-        return (end - start) / 60000; // minutes
+        return (end - start) / 60000;
       });
 
       const avgTurnover = turnoverTimes.length > 0
@@ -93,11 +92,9 @@ export function TableManagement() {
       const db = await getDB();
       const isNew = !table.qrCode;
       
-      // Ensure number and capacity are valid integers
       table.number = Math.max(1, Math.floor(Number(table.number)));
       table.capacity = Math.max(1, Math.floor(Number(table.capacity)));
       
-      // Generate new QR code if table is new or number changed
       if (isNew || (
         !isNew && 
         tables.find(t => t.id === table.id)?.number !== table.number
@@ -126,7 +123,6 @@ export function TableManagement() {
     try {
       const db = await getDB();
       
-      // Check if table has active orders
       const orders = await db.getAll('orders');
       const activeOrders = orders.filter(
         order => order.tableId === table.id && 
@@ -222,71 +218,11 @@ export function TableManagement() {
       />
 
       {editingTable && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-semibold mb-4">
-              {editingTable.id ? 'Edit Table' : 'New Table'}
-            </h3>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              saveTable(editingTable);
-            }} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Table Number</label>
-                <input
-                  type="number"
-                  value={editingTable.number || ''}
-                  onChange={(e) => setEditingTable({ 
-                    ...editingTable, 
-                    number: e.target.value ? parseInt(e.target.value) : 0 
-                  })}
-                  min="1"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Capacity</label>
-                <input
-                  type="number"
-                  value={editingTable.capacity || ''}
-                  onChange={(e) => setEditingTable({ 
-                    ...editingTable, 
-                    capacity: e.target.value ? parseInt(e.target.value) : 0 
-                  })}
-                  min="1"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Status</label>
-                <select
-                  value={editingTable.status}
-                  onChange={(e) => setEditingTable({ ...editingTable, status: e.target.value as Table['status'] })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                >
-                  <option value="available">Available</option>
-                  <option value="occupied">Occupied</option>
-                  <option value="reserved">Reserved</option>
-                </select>
-              </div>
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setEditingTable(null)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <TableForm
+          table={editingTable}
+          onSave={saveTable}
+          onCancel={() => setEditingTable(null)}
+        />
       )}
       
       {viewingQRCode && (
@@ -296,30 +232,12 @@ export function TableManagement() {
         />
       )}
       
-      {/* Delete Confirmation Modal */}
       {deletingTable && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Delete Table</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to delete Table {deletingTable.number}? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setDeletingTable(null)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDeleteTable(deletingTable)}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-              >
-                Delete Table
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteTableDialog
+          table={deletingTable}
+          onConfirm={handleDeleteTable}
+          onCancel={() => setDeletingTable(null)}
+        />
       )}
     </div>
   );
