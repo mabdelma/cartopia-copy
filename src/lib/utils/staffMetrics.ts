@@ -1,7 +1,7 @@
-import { supabase } from '../../integrations/supabase/client';
+import { getDB } from '../db';
 import type { Order } from '../db/schema';
 
-interface StaffMetrics {
+export interface StaffMetrics {
   ordersHandled: number;
   avgServiceTime: number;
   totalSales: number;
@@ -34,12 +34,15 @@ export function calculateEfficiencyScore(count: number, role: string): number {
 }
 
 export async function getStaffMetrics(userId: string): Promise<StaffMetrics> {
-  const { data: orders } = await supabase
-    .from('orders')
-    .select('*')
-    .or(`kitchen_staff_id.eq.${userId},waiter_staff_id.eq.${userId},cashier_id.eq.${userId}`);
+  const db = await getDB();
+  const orders = await db.getAll('orders');
+  const userOrders = orders.filter(order => 
+    order.waiter_staff_id === userId || 
+    order.kitchen_staff_id === userId || 
+    order.cashier_id === userId
+  );
 
-  if (!orders?.length) {
+  if (userOrders.length === 0) {
     return {
       ordersHandled: 0,
       avgServiceTime: 0,
@@ -53,7 +56,7 @@ export async function getStaffMetrics(userId: string): Promise<StaffMetrics> {
     };
   }
 
-  const metrics = orders.reduce((acc, order) => ({
+  const metrics = userOrders.reduce((acc, order) => ({
     ordersHandled: acc.ordersHandled + 1,
     totalSales: acc.totalSales + order.total,
     avgServiceTime: acc.avgServiceTime + (
@@ -61,7 +64,7 @@ export async function getStaffMetrics(userId: string): Promise<StaffMetrics> {
       (new Date(order.completed_at).getTime() - new Date(order.created_at).getTime()) / 60000 
       : 0
     ),
-    rating: acc.rating // Not implemented yet
+    rating: acc.rating
   }), {
     ordersHandled: 0,
     avgServiceTime: 0,
@@ -69,27 +72,24 @@ export async function getStaffMetrics(userId: string): Promise<StaffMetrics> {
     rating: 0
   });
 
-  metrics.avgServiceTime = metrics.avgServiceTime / orders.length;
+  metrics.avgServiceTime = metrics.avgServiceTime / userOrders.length;
+
+  const payments = await db.getAll('payments');
+  const orderPayments = payments.filter(p => 
+    userOrders.some(o => o.id === p.order_id)
+  );
 
   return {
     ...metrics,
     paymentMethods: {
-      card: orders.filter(o => o.payment_status === 'card').length,
-      cash: orders.filter(o => o.payment_status === 'cash').length,
-      wallet: orders.filter(o => o.payment_status === 'wallet').length
+      card: orderPayments.filter(p => p.method === 'card').length,
+      cash: orderPayments.filter(p => p.method === 'cash').length,
+      wallet: orderPayments.filter(p => p.method === 'wallet').length
     }
   };
 }
 
 export async function updateStaffMetrics(userId: string, order?: Order): Promise<void> {
-  const metrics = await getStaffMetrics(userId);
-  
-  const { error } = await supabase
-    .from('users')
-    .update({
-      last_active: new Date().toISOString()
-    })
-    .eq('id', userId);
-
-  if (error) throw error;
+  // This function will be implemented when needed
+  // It should update metrics in real-time when orders change
 }
