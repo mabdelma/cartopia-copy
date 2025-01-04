@@ -1,20 +1,24 @@
-import { getDB } from '../db';
+import { supabase } from '../../integrations/supabase/client';
 
 export async function checkForExistingAdmin(): Promise<boolean> {
-  const db = await getDB();
-  const users = await db.getAll('users');
-  return users.some(user => user.role === 'admin');
+  const { data, error } = await supabase
+    .from('users')
+    .select('id')
+    .eq('role', 'admin')
+    .limit(1);
+    
+  if (error) throw error;
+  return data && data.length > 0;
 }
 
 export async function createInitialAdmin(email: string, name: string): Promise<void> {
-  const db = await getDB();
-  
-  await db.add('users', {
-    id: crypto.randomUUID(),
-    name,
-    email,
-    role: 'admin',
-    joinedAt: new Date(),
-    lastActive: new Date()
-  });
+  const { error } = await supabase
+    .from('users')
+    .insert({
+      email,
+      name,
+      role: 'admin'
+    });
+    
+  if (error) throw error;
 }

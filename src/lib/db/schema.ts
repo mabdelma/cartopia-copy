@@ -1,86 +1,28 @@
-// Database schema and types for IndexedDB
-export interface User {
-  id: string;
-  role: 'customer' | 'waiter' | 'kitchen' | 'admin' | 'cashier';
-  name: string;
-  email: string;
-  profileImage?: string;
-  bio?: string;
-  phoneNumber?: string;
-  joinedAt: Date;
-  lastActive: Date;
-}
+import type { Database } from '../../integrations/supabase/types';
 
-export interface Table {
-  id: string;
-  number: number;
-  capacity: number;
-  status: 'available' | 'occupied' | 'reserved';
-  qrCode: string;
-}
+export type MenuCategory = Database['public']['Tables']['menu_categories']['Row'];
+export type MenuItem = Database['public']['Tables']['menu_items']['Row'];
+export type Order = Database['public']['Tables']['orders']['Row'];
+export type OrderItem = Database['public']['Tables']['order_items']['Row'];
+export type Payment = Database['public']['Tables']['payments']['Row'];
+export type Table = Database['public']['Tables']['tables']['Row'];
+export type User = Database['public']['Tables']['users']['Row'];
 
-export interface MenuCategory {
-  id: string;
-  name: string;
-  type: 'main' | 'sub';
-  parentId?: string;
-  order: number;
-}
+export type OrderWithDetails = Order & {
+  items: (OrderItem & { menuItem: MenuItem })[];
+  table: Table;
+  waiterStaff?: User;
+  kitchenStaff?: User;
+  cashier?: User;
+};
 
-export interface MenuItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  mainCategoryId: string;
-  subCategoryId: string;
-  image: string;
-  available: boolean;
-  customizations?: {
-    name: string;
-    options: string[];
-    price?: number;
-  }[];
-}
+export type PaymentWithOrder = Payment & {
+  order: Order;
+};
 
-export interface Order {
-  id: string;
-  tableId: string;
-  waiterStaffId?: string;
-  kitchenStaffId?: string;
-  cashierId?: string;
-  status: 'pending' | 'preparing' | 'ready' | 'delivered';
-  items: OrderItem[];
-  total: number;
-  createdAt: Date;
-  updatedAt: Date;
-  completedAt?: Date;
-  hasComplaints?: boolean;
-  paymentStatus: 'unpaid' | 'partially' | 'paid';
-}
-
-export interface OrderItem {
-  id: string;
-  menuItemId: string;
-  quantity: number;
-  notes?: string;
-  customizations?: {
-    name: string;
-    selected: string;
-    price?: number;
-  }[];
-}
-
-export interface Payment {
-  id: string;
-  orderId: string;
-  amount: number;
-  method: 'card' | 'wallet' | 'crypto';
-  status: 'unpaid' | 'paid' | 'failed';
-  splits?: {
-    userId: string;
-    amount: number;
-  }[];
-  tip?: number;
-  createdAt: Date;
-}
+export type CategoryType = Database['public']['Enums']['category_type'];
+export type OrderStatus = Database['public']['Enums']['order_status'];
+export type PaymentStatus = Database['public']['Enums']['payment_status'];
+export type PaymentMethod = Database['public']['Enums']['payment_method'];
+export type TableStatus = Database['public']['Enums']['table_status'];
+export type UserRole = Database['public']['Enums']['user_role'];

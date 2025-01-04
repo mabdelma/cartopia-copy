@@ -1,126 +1,70 @@
-import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { seedInitialData } from './seed';
-import type { User, MenuItem, Table, MenuCategory, Order, Payment } from './schema';
+import { supabase } from '../../integrations/supabase/client';
+import type { 
+  MenuCategory, MenuItem, Order, OrderItem, 
+  Payment, Table, User 
+} from './schema';
 
-export interface QCartDB extends DBSchema {
-  menu_categories: {
-    key: string;
-    value: MenuCategory;
-    indexes: { 'by-type': string; 'by-parent': string; 'by-order': number };
-  };
-  users: {
-    key: string;
-    value: User;
-    indexes: { 'by-email': string };
-  };
-  tables: {
-    key: string;
-    value: Table;
-    indexes: { 'by-number': number };
-  };
-  menu_items: {
-    key: string;
-    value: MenuItem;
-    indexes: { 'by-main-category': string; 'by-sub-category': string };
-  };
-  orders: {
-    key: string;
-    value: Order;
-    indexes: { 'by-table': string; 'by-status': string };
-  };
-  payments: {
-    key: string;
-    value: Payment;
-    indexes: { 'by-order': string };
-  };
+export async function getAll(table: 'menu_categories'): Promise<MenuCategory[]>;
+export async function getAll(table: 'menu_items'): Promise<MenuItem[]>;
+export async function getAll(table: 'orders'): Promise<Order[]>;
+export async function getAll(table: 'order_items'): Promise<OrderItem[]>;
+export async function getAll(table: 'payments'): Promise<Payment[]>;
+export async function getAll(table: 'tables'): Promise<Table[]>;
+export async function getAll(table: 'users'): Promise<User[]>;
+export async function getAll(
+  table: 'menu_categories' | 'menu_items' | 'orders' | 'order_items' | 'payments' | 'tables' | 'users'
+) {
+  const { data, error } = await supabase.from(table).select();
+  if (error) throw error;
+  return data;
 }
 
-let db: IDBPDatabase<QCartDB> | null = null;
-let dbInitPromise: Promise<IDBPDatabase<QCartDB>> | null = null;
-
-const STORES = {
-  users: { keyPath: 'id', indexes: [{ name: 'by-email', keyPath: 'email', options: { unique: true } }] },
-  menu_categories: {
-    keyPath: 'id',
-    indexes: [
-      { name: 'by-type', keyPath: 'type' },
-      { name: 'by-parent', keyPath: 'parentId' },
-      { name: 'by-order', keyPath: 'order' }
-    ]
-  },
-  tables: { keyPath: 'id', indexes: [{ name: 'by-number', keyPath: 'number', options: { unique: true } }] },
-  menu_items: {
-    keyPath: 'id',
-    indexes: [
-      { name: 'by-main-category', keyPath: 'mainCategoryId' },
-      { name: 'by-sub-category', keyPath: 'subCategoryId' }
-    ]
-  },
-  orders: {
-    keyPath: 'id',
-    indexes: [
-      { name: 'by-table', keyPath: 'tableId' },
-      { name: 'by-status', keyPath: 'status' }
-    ]
-  },
-  payments: { keyPath: 'id', indexes: [{ name: 'by-order', keyPath: 'orderId' }] }
-};
-
-async function createDatabase(): Promise<IDBPDatabase<QCartDB>> {
-  return openDB<QCartDB>('qcart-v1', 1, {
-    async upgrade(database, oldVersion, newVersion, transaction) {
-      // Create all stores and their indexes
-      for (const [storeName, config] of Object.entries(STORES)) {
-        if (!database.objectStoreNames.contains(storeName)) {
-          const store = database.createObjectStore(storeName, { keyPath: config.keyPath });
-          
-          // Create indexes
-          if (config.indexes) {
-            for (const index of config.indexes) {
-              store.createIndex(index.name, index.keyPath, index.options);
-            }
-          }
-        }
-      }
-      
-      // Seed initial data
-      await seedInitialData(database);
-    },
-    blocked() {
-      console.warn('Database blocked: another version is open');
-    },
-    blocking() {
-      console.warn('Database blocking: closing older version');
-      db?.close();
-      db = null;
-    },
-    terminated() {
-      console.warn('Database terminated');
-      db = null;
-      dbInitPromise = null;
-    }
-  });
+export async function get(table: 'menu_categories', id: string): Promise<MenuCategory>;
+export async function get(table: 'menu_items', id: string): Promise<MenuItem>;
+export async function get(table: 'orders', id: string): Promise<Order>;
+export async function get(table: 'order_items', id: string): Promise<OrderItem>;
+export async function get(table: 'payments', id: string): Promise<Payment>;
+export async function get(table: 'tables', id: string): Promise<Table>;
+export async function get(table: 'users', id: string): Promise<User>;
+export async function get(
+  table: 'menu_categories' | 'menu_items' | 'orders' | 'order_items' | 'payments' | 'tables' | 'users',
+  id: string
+) {
+  const { data, error } = await supabase
+    .from(table)
+    .select()
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  return data;
 }
 
-export async function initDB(): Promise<IDBPDatabase<QCartDB>> {
-  if (!dbInitPromise) {
-    dbInitPromise = createDatabase()
-      .then(async (database) => {
-        db = database;
-        return database;
-      })
-      .catch((error) => {
-        console.error('Failed to initialize database:', error);
-        dbInitPromise = null;
-        throw error;
-      });
-  }
-  return dbInitPromise;
+export async function put<T extends { id: string }>(
+  table: 'menu_categories' | 'menu_items' | 'orders' | 'order_items' | 'payments' | 'tables' | 'users',
+  item: T
+) {
+  const { data, error } = await supabase
+    .from(table)
+    .upsert(item)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 }
 
-export async function getDB(): Promise<IDBPDatabase<QCartDB>> {
-  if (!db) {
-    db = await initDB();
-  }
-  return db;
+export async function remove(
+  table: 'menu_categories' | 'menu_items' | 'orders' | 'order_items' | 'payments' | 'tables' | 'users',
+  id: string
+) {
+  const { error } = await supabase
+    .from(table)
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
+
+// Remove initDB since we're using Supabase now
+export async function initDB() {
+  // No initialization needed for Supabase
+  return;
 }
