@@ -98,28 +98,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           password
         });
 
-      if (authError) {
-        console.error('Auth error:', authError);
-        throw new Error(authError.message);
-      }
-
-      if (!authUser) {
-        throw new Error('No user returned from auth');
-      }
+      if (authError) throw authError;
+      if (!authUser) throw new Error('No user returned from auth');
 
       const db = await getDB();
       const dbUser = await db.get('users', authUser.id);
       
-      if (!dbUser) {
-        throw new Error('User not found in database');
-      }
+      if (!dbUser) throw new Error('User not found in database');
 
       dispatch({ type: 'LOGIN_SUCCESS', payload: dbUser });
       return dbUser;
     } catch (error) {
-      console.error('Login error:', error);
-      dispatch({ type: 'LOGIN_ERROR', payload: (error as Error).message || 'Login failed' });
-      return null;
+      const message = error instanceof Error ? error.message : 'Login failed';
+      dispatch({ type: 'LOGIN_ERROR', payload: message });
+      throw error;
     }
   };
 
@@ -129,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'LOGOUT' });
     } catch (error) {
       console.error('Logout error:', error);
+      throw error;
     }
   };
 

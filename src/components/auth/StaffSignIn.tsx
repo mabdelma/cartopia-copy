@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { AuthLayout } from './AuthLayout';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ChefHat, UserCircle, DollarSign, Shield } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function StaffSignIn() {
   const navigate = useNavigate();
@@ -25,6 +26,8 @@ export function StaffSignIn() {
         }
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Login failed';
+      toast.error(message);
       console.error('Login failed:', error);
     }
   };

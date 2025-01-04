@@ -9,24 +9,13 @@ export type Payment = Database['public']['Tables']['payments']['Row'];
 export type Table = Database['public']['Tables']['tables']['Row'];
 export type User = Database['public']['Tables']['users']['Row'];
 
-// Helper type for converting snake_case to camelCase
-type CamelCase<S extends string> = S extends `${infer P}_${infer Q}`
-  ? `${P}${Capitalize<CamelCase<Q>>}`
-  : S;
-
-// Helper type for converting object keys from snake_case to camelCase
-type CamelCaseKeys<T> = {
-  [K in keyof T as CamelCase<string & K>]: T[K] extends object
-    ? CamelCaseKeys<T[K]>
-    : T[K];
-};
-
-// Export camelCase versions of types for frontend use
-export type CamelCaseUser = CamelCaseKeys<User>;
-export type CamelCaseOrder = CamelCaseKeys<Order>;
-export type CamelCaseMenuItem = CamelCaseKeys<MenuItem>;
-export type CamelCaseTable = CamelCaseKeys<Table>;
-export type CamelCasePayment = CamelCaseKeys<Payment>;
+// Enums
+export type CategoryType = Database['public']['Enums']['category_type'];
+export type OrderStatus = Database['public']['Enums']['order_status'];
+export type PaymentStatus = Database['public']['Enums']['payment_status'];
+export type PaymentMethod = Database['public']['Enums']['payment_method'];
+export type TableStatus = Database['public']['Enums']['table_status'];
+export type UserRole = Database['public']['Enums']['user_role'];
 
 // Extended types with relationships
 export type OrderWithItems = Order & {
@@ -41,52 +30,11 @@ export type OrderWithDetails = Order & {
   cashier?: User;
 };
 
-// Enums
-export type CategoryType = Database['public']['Enums']['category_type'];
-export type OrderStatus = Database['public']['Enums']['order_status'];
-export type PaymentStatus = Database['public']['Enums']['payment_status'];
-export type PaymentMethod = Database['public']['Enums']['payment_method'];
-export type TableStatus = Database['public']['Enums']['table_status'];
-export type UserRole = Database['public']['Enums']['user_role'];
-
 // Type guards
-export const isOrderWithDetails = (order: any): order is OrderWithDetails => {
-  return order && Array.isArray(order.items);
+export const isOrderWithDetails = (order: unknown): order is OrderWithDetails => {
+  return Boolean(order && typeof order === 'object' && 'items' in order);
 };
 
-export const isOrderWithItems = (order: any): order is OrderWithItems => {
-  return order && Array.isArray(order.items);
-};
-
-// Helper functions for converting between snake_case and camelCase
-export const toCamelCase = <T extends object>(obj: T): CamelCaseKeys<T> => {
-  if (Array.isArray(obj)) {
-    return obj.map((item) => toCamelCase(item)) as any;
-  }
-  
-  if (obj === null || typeof obj !== 'object') {
-    return obj as any;
-  }
-
-  return Object.keys(obj).reduce((acc, key) => {
-    const camelKey = key.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
-    acc[camelKey as keyof typeof acc] = toCamelCase((obj as any)[key]);
-    return acc;
-  }, {} as CamelCaseKeys<T>);
-};
-
-export const toSnakeCase = <T extends object>(obj: T): any => {
-  if (Array.isArray(obj)) {
-    return obj.map((item) => toSnakeCase(item));
-  }
-  
-  if (obj === null || typeof obj !== 'object') {
-    return obj;
-  }
-
-  return Object.keys(obj).reduce((acc, key) => {
-    const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-    acc[snakeKey] = toSnakeCase((obj as any)[key]);
-    return acc;
-  }, {} as any);
+export const isOrderWithItems = (order: unknown): order is OrderWithItems => {
+  return Boolean(order && typeof order === 'object' && 'items' in order);
 };
