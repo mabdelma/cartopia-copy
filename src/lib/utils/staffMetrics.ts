@@ -1,5 +1,5 @@
 import { getDB } from '../db';
-import type { Order } from '../db/schema';
+import type { Order, Payment } from '../db/schema';
 
 export interface StaffMetrics {
   ordersHandled: number;
@@ -11,26 +11,6 @@ export interface StaffMetrics {
     cash: number;
     wallet: number;
   };
-}
-
-export function calculateSpeedScore(avgTime: number, role: string): number {
-  const targetTimes = {
-    waiter: 10,
-    kitchen: 20,
-    cashier: 5
-  };
-  const target = targetTimes[role as keyof typeof targetTimes] || 15;
-  return Math.max(0, Math.min(100, (target / avgTime) * 100));
-}
-
-export function calculateEfficiencyScore(count: number, role: string): number {
-  const targetCounts = {
-    waiter: 50,
-    kitchen: 40,
-    cashier: 60
-  };
-  const target = targetCounts[role as keyof typeof targetCounts] || 45;
-  return Math.max(0, Math.min(100, (count / target) * 100));
 }
 
 export async function getStaffMetrics(userId: string): Promise<StaffMetrics> {
@@ -90,6 +70,9 @@ export async function getStaffMetrics(userId: string): Promise<StaffMetrics> {
 }
 
 export async function updateStaffMetrics(userId: string, order?: Order): Promise<void> {
-  // This function will be implemented when needed
-  // It should update metrics in real-time when orders change
+  const db = await getDB();
+  await db.put('users', {
+    id: userId,
+    last_active: new Date().toISOString()
+  });
 }

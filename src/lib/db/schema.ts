@@ -44,3 +44,8 @@ export type PaymentStatus = Database['public']['Enums']['payment_status'];
 export type PaymentMethod = Database['public']['Enums']['payment_method'];
 export type TableStatus = Database['public']['Enums']['table_status'];
 export type UserRole = Database['public']['Enums']['user_role'];
+
+// Type guards
+export const isOrderWithDetails = (order: any): order is OrderWithDetails => {
+  return order && Array.isArray(order.items);
+};
