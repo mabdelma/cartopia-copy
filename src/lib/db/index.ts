@@ -53,3 +53,5 @@ export const db = {
   delete: remove,
   add: put
 };
+
+export { db as getDB };

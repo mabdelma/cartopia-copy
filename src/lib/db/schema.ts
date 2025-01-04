@@ -9,15 +9,26 @@ export type Payment = Database['public']['Tables']['payments']['Row'];
 export type Table = Database['public']['Tables']['tables']['Row'];
 export type User = Database['public']['Tables']['users']['Row'];
 
-// Enums
-export type CategoryType = Database['public']['Enums']['category_type'];
-export type OrderStatus = Database['public']['Enums']['order_status'];
-export type PaymentStatus = Database['public']['Enums']['payment_status'];
-export type PaymentMethod = Database['public']['Enums']['payment_method'];
-export type TableStatus = Database['public']['Enums']['table_status'];
-export type UserRole = Database['public']['Enums']['user_role'];
+// Helper type for converting snake_case to camelCase
+type CamelCase<S extends string> = S extends `${infer P}_${infer Q}`
+  ? `${P}${Capitalize<CamelCase<Q>>}`
+  : S;
 
-// Extended types
+// Helper type for converting object keys from snake_case to camelCase
+type CamelCaseKeys<T> = {
+  [K in keyof T as CamelCase<string & K>]: T[K] extends object
+    ? CamelCaseKeys<T[K]>
+    : T[K];
+};
+
+// Export camelCase versions of types for frontend use
+export type CamelCaseUser = CamelCaseKeys<User>;
+export type CamelCaseOrder = CamelCaseKeys<Order>;
+export type CamelCaseMenuItem = CamelCaseKeys<MenuItem>;
+export type CamelCaseTable = CamelCaseKeys<Table>;
+export type CamelCasePayment = CamelCaseKeys<Payment>;
+
+// Extended types with relationships
 export type OrderWithDetails = Order & {
   items: (OrderItem & { menuItem: MenuItem })[];
   table: Table;
@@ -26,6 +37,10 @@ export type OrderWithDetails = Order & {
   cashier?: User;
 };
 
-export type PaymentWithOrder = Payment & {
-  order: Order;
-};
+// Enums
+export type CategoryType = Database['public']['Enums']['category_type'];
+export type OrderStatus = Database['public']['Enums']['order_status'];
+export type PaymentStatus = Database['public']['Enums']['payment_status'];
+export type PaymentMethod = Database['public']['Enums']['payment_method'];
+export type TableStatus = Database['public']['Enums']['table_status'];
+export type UserRole = Database['public']['Enums']['user_role'];
