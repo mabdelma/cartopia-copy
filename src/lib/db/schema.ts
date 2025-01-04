@@ -1,13 +1,24 @@
 import type { Database } from '../../integrations/supabase/types';
 
-// Raw database types
-export type MenuCategory = Database['public']['Tables']['menu_categories']['Row'];
-export type MenuItem = Database['public']['Tables']['menu_items']['Row'];
-export type Order = Database['public']['Tables']['orders']['Row'];
-export type OrderItem = Database['public']['Tables']['order_items']['Row'];
-export type Payment = Database['public']['Tables']['payments']['Row'];
-export type Table = Database['public']['Tables']['tables']['Row'];
-export type User = Database['public']['Tables']['users']['Row'];
+// Convert snake_case to camelCase type
+type CamelCase<S extends string> = S extends `${infer P}_${infer Q}`
+  ? `${P}${Capitalize<CamelCase<Q>>}`
+  : S;
+
+type CamelCaseObject<T> = {
+  [K in keyof T as CamelCase<string & K>]: T[K] extends object
+    ? CamelCaseObject<T[K]>
+    : T[K];
+};
+
+// Raw database types with camelCase conversion
+export type MenuCategory = CamelCaseObject<Database['public']['Tables']['menu_categories']['Row']>;
+export type MenuItem = CamelCaseObject<Database['public']['Tables']['menu_items']['Row']>;
+export type Order = CamelCaseObject<Database['public']['Tables']['orders']['Row']>;
+export type OrderItem = CamelCaseObject<Database['public']['Tables']['order_items']['Row']>;
+export type Payment = CamelCaseObject<Database['public']['Tables']['payments']['Row']>;
+export type Table = CamelCaseObject<Database['public']['Tables']['tables']['Row']>;
+export type User = CamelCaseObject<Database['public']['Tables']['users']['Row']>;
 
 // Enums
 export type CategoryType = Database['public']['Enums']['category_type'];
@@ -26,7 +37,7 @@ export type OrderWithDetails = Order & {
   items: (OrderItem & { menuItem: MenuItem })[];
   table: Table;
   waiter?: User;
-  kitchen_staff?: User;
+  kitchenStaff?: User;
   cashier?: User;
 };
 
