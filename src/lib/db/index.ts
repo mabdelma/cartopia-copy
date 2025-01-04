@@ -1,13 +1,13 @@
 import { supabase } from '../../integrations/supabase/client';
-import type { Tables } from '../../integrations/supabase/types';
+import type { Database } from '../../integrations/supabase/types';
 
-type TableName = keyof Tables['public']['Tables'];
+type TableName = keyof Database['public']['Tables'];
 
 class DB {
   async get<T extends TableName>(
     table: T,
     id: string
-  ): Promise<Tables['public']['Tables'][T]['Row']> {
+  ): Promise<Database['public']['Tables'][T]['Row']> {
     const { data, error } = await supabase
       .from(table)
       .select('*')
@@ -20,7 +20,7 @@ class DB {
 
   async getAll<T extends TableName>(
     table: T
-  ): Promise<Tables['public']['Tables'][T]['Row'][]> {
+  ): Promise<Database['public']['Tables'][T]['Row'][]> {
     const { data, error } = await supabase
       .from(table)
       .select('*');
@@ -31,8 +31,8 @@ class DB {
 
   async put<T extends TableName>(
     table: T,
-    item: Partial<Tables['public']['Tables'][T]['Row']>
-  ): Promise<Tables['public']['Tables'][T]['Row']> {
+    item: Partial<Database['public']['Tables'][T]['Row']>
+  ): Promise<Database['public']['Tables'][T]['Row']> {
     const { data, error } = await supabase
       .from(table)
       .upsert(item)
@@ -57,9 +57,24 @@ class DB {
 
   async add<T extends TableName>(
     table: T,
-    item: Partial<Tables['public']['Tables'][T]['Row']>
-  ): Promise<Tables['public']['Tables'][T]['Row']> {
+    item: Partial<Database['public']['Tables'][T]['Row']>
+  ): Promise<Database['public']['Tables'][T]['Row']> {
     return this.put(table, item);
+  }
+
+  async clear<T extends TableName>(table: T): Promise<void> {
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .neq('id', ''); // Delete all records
+
+    if (error) throw error;
+  }
+
+  async transaction<T>(callback: () => Promise<T>): Promise<T> {
+    // Note: Supabase client doesn't support transactions directly
+    // This is a placeholder for future implementation
+    return callback();
   }
 }
 

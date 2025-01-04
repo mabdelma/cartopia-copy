@@ -29,6 +29,10 @@ export type CamelCaseTable = CamelCaseKeys<Table>;
 export type CamelCasePayment = CamelCaseKeys<Payment>;
 
 // Extended types with relationships
+export type OrderWithItems = Order & {
+  items: (OrderItem & { menuItem: MenuItem })[];
+};
+
 export type OrderWithDetails = Order & {
   items: (OrderItem & { menuItem: MenuItem })[];
   table: Table;
@@ -47,5 +51,9 @@ export type UserRole = Database['public']['Enums']['user_role'];
 
 // Type guards
 export const isOrderWithDetails = (order: any): order is OrderWithDetails => {
+  return order && Array.isArray(order.items);
+};
+
+export const isOrderWithItems = (order: any): order is OrderWithItems => {
   return order && Array.isArray(order.items);
 };
