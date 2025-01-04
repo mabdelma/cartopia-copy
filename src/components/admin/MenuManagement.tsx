@@ -4,6 +4,8 @@ import { getDB } from '../../lib/db';
 import type { MenuItem, MenuCategory } from '../../lib/db/schema';
 import { uploadImage } from '../../lib/utils/imageUpload';
 import { CategoryManagement } from './CategoryManagement';
+import { migrateToSupabase } from '../../lib/utils/migrateToSupabase';
+import { getMenuItems, saveMenuItem, deleteMenuItem } from '../../lib/api/menuApi';
 
 export function MenuManagement() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
@@ -14,7 +16,9 @@ export function MenuManagement() {
   const [availableSubCategories, setAvailableSubCategories] = useState<MenuCategory[]>([]);
 
   useEffect(() => {
-    loadMenuItems();
+    migrateToSupabase().then(() => {
+      loadMenuItems();
+    });
   }, []);
 
   useEffect(() => {
@@ -27,34 +31,35 @@ export function MenuManagement() {
   }, [editingItem?.mainCategoryId, categories]);
 
   async function loadMenuItems() {
-    const db = await getDB();
-    const [items, cats] = await Promise.all([
-      db.getAll('menu_items'),
-      db.getAll('menu_categories')
-    ]);
-    
-    const sortedCategories = cats.sort((a, b) => a.order - b.order);
-    const mainCategories = sortedCategories.filter(c => c.type === 'main');
-    
-    setMenuItems(items);
-    setCategories(sortedCategories);
-    
-    if (mainCategories.length > 0 && !selectedMainCategory) {
-      setSelectedMainCategory(mainCategories[0].id);
+    try {
+      const items = await getMenuItems();
+      setMenuItems(items);
+      const mainCategories = categories.filter(c => c.type === 'main');
+      if (mainCategories.length > 0 && !selectedMainCategory) {
+        setSelectedMainCategory(mainCategories[0].id);
+      }
+    } catch (error) {
+      console.error('Failed to load menu items:', error);
     }
   }
 
   async function saveMenuItem(item: MenuItem) {
-    const db = await getDB();
-    await db.put('menu_items', item);
-    setEditingItem(null);
-    loadMenuItems();
+    try {
+      await saveMenuItem(item);
+      setEditingItem(null);
+      loadMenuItems();
+    } catch (error) {
+      console.error('Failed to save menu item:', error);
+    }
   }
 
   async function deleteMenuItem(id: string) {
-    const db = await getDB();
-    await db.delete('menu_items', id);
-    loadMenuItems();
+    try {
+      await deleteMenuItem(id);
+      loadMenuItems();
+    } catch (error) {
+      console.error('Failed to delete menu item:', error);
+    }
   }
 
   const mainCategories = categories.filter(c => c.type === 'main');
@@ -75,7 +80,6 @@ export function MenuManagement() {
                 const firstSubCategory = categories.find(
                   c => c.type === 'sub' && c.parentId === firstMainCategory
                 )?.id || '';
-                // Reset the form completely including the image
                 setEditingItem({
                   id: crypto.randomUUID(),
                   name: '',
@@ -86,7 +90,6 @@ export function MenuManagement() {
                   image: '',
                   available: true
                 });
-                // Reset any file input by clearing its value
                 const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
                 if (fileInput) {
                   fileInput.value = '';
