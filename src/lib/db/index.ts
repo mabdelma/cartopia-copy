@@ -67,20 +67,20 @@ class DB {
   async get<T extends TableName>(
     table: T,
     id: string
-  ): Promise<Row<T>> {
+  ): Promise<Row<T> | null> {
     return retryOperation(async () => {
       const { data, error } = await supabase
         .from(table)
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error(`Error fetching from ${table}:`, error);
         throw error;
       }
-      if (!data) throw new Error(`No record found in ${table} with id ${id}`);
-      return toCamelCase(data) as Row<T>;
+      
+      return data ? toCamelCase(data) as Row<T> : null;
     });
   }
 
