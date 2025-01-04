@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthLayout } from './AuthLayout';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
-import { ChefHat, UserCircle, DollarSign, Shield } from 'lucide-react';
+import { Shield, ChefHat, UserCircle, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { ErrorMessage } from '../ui/ErrorMessage';
 
@@ -49,36 +49,47 @@ export function StaffSignIn() {
 
   return (
     <AuthLayout title="Staff Sign In">
-      <div className="flex justify-center space-x-8 mb-8">
+      <div className="flex justify-center space-x-12 mb-10">
         <div className="text-center">
-          <div className="p-3 bg-purple-100 rounded-full inline-flex mb-2">
-            <Shield className="w-6 h-6 text-purple-600" />
+          <div className="p-4 bg-purple-100 rounded-full inline-flex mb-2">
+            <Shield className="w-7 h-7 text-purple-600" />
           </div>
-          <p className="text-sm font-medium text-gray-600">Admin</p>
+          <p className="text-sm font-medium text-gray-700">Admin</p>
         </div>
         <div className="text-center">
-          <div className="p-3 bg-blue-100 rounded-full inline-flex mb-2">
-            <ChefHat className="w-6 h-6 text-blue-600" />
+          <div className="p-4 bg-blue-100 rounded-full inline-flex mb-2">
+            <ChefHat className="w-7 h-7 text-blue-600" />
           </div>
-          <p className="text-sm font-medium text-gray-600">Kitchen Staff</p>
+          <p className="text-sm font-medium text-gray-700">Kitchen Staff</p>
         </div>
         <div className="text-center">
-          <div className="p-3 bg-yellow-100 rounded-full inline-flex mb-2">
-            <DollarSign className="w-6 h-6 text-yellow-600" />
+          <div className="p-4 bg-yellow-100 rounded-full inline-flex mb-2">
+            <DollarSign className="w-7 h-7 text-yellow-600" />
           </div>
-          <p className="text-sm font-medium text-gray-600">Cashier</p>
+          <p className="text-sm font-medium text-gray-700">Cashier</p>
         </div>
         <div className="text-center">
-          <div className="p-3 bg-green-100 rounded-full inline-flex mb-2">
-            <UserCircle className="w-6 h-6 text-green-600" />
+          <div className="p-4 bg-green-100 rounded-full inline-flex mb-2">
+            <UserCircle className="w-7 h-7 text-green-600" />
           </div>
-          <p className="text-sm font-medium text-gray-600">Waiter Staff</p>
+          <p className="text-sm font-medium text-gray-700">Waiter Staff</p>
         </div>
       </div>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
         {(formError || state.error) && (
-          <ErrorMessage message={formError || state.error} />
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 text-red-500">
+                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{formError || state.error}</p>
+              </div>
+            </div>
+          </div>
         )}
 
         <div>
