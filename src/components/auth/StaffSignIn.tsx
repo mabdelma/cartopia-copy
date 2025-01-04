@@ -16,8 +16,9 @@ export function StaffSignIn() {
     try {
       const user = await login(email, password);
       if (user) {
-        if (user.role === 'admin') navigate('/admin');
-        else if (['kitchen', 'waiter', 'cashier'].includes(user.role)) {
+        if (user.role === 'admin') {
+          navigate('/admin');
+        } else if (['kitchen', 'waiter', 'cashier'].includes(user.role)) {
           navigate('/staff');
         } else {
           throw new Error('Unauthorized role');

@@ -70,6 +70,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const user = await db.get('users', session.user.id);
             if (user) {
               dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+            } else {
+              dispatch({ type: 'LOGIN_ERROR', payload: 'User not found in database' });
             }
           } catch (error) {
             console.error('Error fetching user:', error);
@@ -89,17 +91,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string): Promise<User | null> => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      // First authenticate with Supabase
       const { data: { user: authUser }, error: authError } = 
         await supabase.auth.signInWithPassword({
           email,
           password
         });
 
-      if (authError) throw authError;
-      if (!authUser) throw new Error('No user returned from auth');
+      if (authError) {
+        console.error('Auth error:', authError);
+        throw new Error('Invalid credentials');
+      }
 
-      // Then get the user data from local DB
+      if (!authUser) {
+        throw new Error('No user returned from auth');
+      }
+
       const db = await getDB();
       const dbUser = await db.get('users', authUser.id);
       
@@ -111,14 +117,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return dbUser;
     } catch (error) {
       console.error('Login error:', error);
-      dispatch({ type: 'LOGIN_ERROR', payload: 'Invalid credentials' });
+      dispatch({ type: 'LOGIN_ERROR', payload: (error as Error).message || 'Login failed' });
       return null;
     }
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    dispatch({ type: 'LOGOUT' });
+    try {
+      await supabase.auth.signOut();
+      dispatch({ type: 'LOGOUT' });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
