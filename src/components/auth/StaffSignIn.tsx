@@ -40,13 +40,19 @@ export function StaffSignIn() {
     } catch (error) {
       let message = 'Login failed';
       if (error instanceof Error) {
-        if (error.message.includes('Email not confirmed')) {
+        const errorMessage = error.message.toLowerCase();
+        if (errorMessage.includes('email not confirmed')) {
           message = 'Please check your email and confirm your account before signing in';
           toast.error(message, {
             description: 'Check your inbox and spam folder for the confirmation email'
           });
-        } else if (error.message.includes('Invalid login credentials')) {
+        } else if (errorMessage.includes('invalid login credentials')) {
           message = 'Invalid email or password';
+        } else if (errorMessage.includes('email logins are disabled')) {
+          message = 'Email login is currently disabled';
+          toast.error('Authentication Error', {
+            description: 'Email authentication is not enabled in the system. Please contact an administrator.'
+          });
         }
       }
       setFormError(message);
