@@ -39,90 +39,146 @@ function toSnakeCase<T extends Record<string, any>>(obj: T): any {
   return obj;
 }
 
+// Retry configuration
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+
+async function retryOperation<T>(
+  operation: () => Promise<T>,
+  retries = MAX_RETRIES,
+  delay = INITIAL_RETRY_DELAY
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (retries === 0) {
+      console.error('Operation failed after all retry attempts:', error);
+      throw error;
+    }
+
+    console.warn(`Operation failed, retrying in ${delay}ms... (${retries} attempts left)`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    
+    return retryOperation(operation, retries - 1, delay * 2);
+  }
+}
+
 class DB {
   async get<T extends TableName>(
     table: T,
     id: string
   ): Promise<Row<T>> {
-    const { data, error } = await supabase
-      .from(table)
-      .select('*')
-      .eq('id', id)
-      .single();
+    return retryOperation(async () => {
+      const { data, error } = await supabase
+        .from(table)
+        .select('*')
+        .eq('id', id)
+        .single();
 
-    if (error) throw error;
-    if (!data) throw new Error(`No record found in ${table} with id ${id}`);
-    return toCamelCase(data) as Row<T>;
+      if (error) {
+        console.error(`Error fetching from ${table}:`, error);
+        throw error;
+      }
+      if (!data) throw new Error(`No record found in ${table} with id ${id}`);
+      return toCamelCase(data) as Row<T>;
+    });
   }
 
   async getAll<T extends TableName>(
     table: T
   ): Promise<Row<T>[]> {
-    const { data, error } = await supabase
-      .from(table)
-      .select('*');
+    return retryOperation(async () => {
+      const { data, error } = await supabase
+        .from(table)
+        .select('*');
 
-    if (error) throw error;
-    if (!data) return [];
-    return toCamelCase(data) as Row<T>[];
+      if (error) {
+        console.error(`Error fetching all from ${table}:`, error);
+        throw error;
+      }
+      if (!data) return [];
+      return toCamelCase(data) as Row<T>[];
+    });
   }
 
   async add<T extends TableName>(
     table: T,
     item: Insert<T>
   ): Promise<Row<T>> {
-    const snakeCaseItem = toSnakeCase(item);
-    const { data, error } = await supabase
-      .from(table)
-      .insert(snakeCaseItem)
-      .select()
-      .single();
+    return retryOperation(async () => {
+      const snakeCaseItem = toSnakeCase(item);
+      const { data, error } = await supabase
+        .from(table)
+        .insert(snakeCaseItem)
+        .select()
+        .single();
 
-    if (error) throw error;
-    if (!data) throw new Error(`Failed to insert into ${table}`);
-    return toCamelCase(data) as Row<T>;
+      if (error) {
+        console.error(`Error inserting into ${table}:`, error);
+        throw error;
+      }
+      if (!data) throw new Error(`Failed to insert into ${table}`);
+      return toCamelCase(data) as Row<T>;
+    });
   }
 
   async put<T extends TableName>(
     table: T,
     item: Partial<Row<T>> & { id: string }
   ): Promise<Row<T>> {
-    const snakeCaseItem = toSnakeCase(item);
-    const { data, error } = await supabase
-      .from(table)
-      .update(snakeCaseItem)
-      .eq('id', item.id)
-      .select()
-      .single();
+    return retryOperation(async () => {
+      const snakeCaseItem = toSnakeCase(item);
+      const { data, error } = await supabase
+        .from(table)
+        .update(snakeCaseItem)
+        .eq('id', item.id)
+        .select()
+        .single();
 
-    if (error) throw error;
-    if (!data) throw new Error(`Failed to update ${table} with id ${item.id}`);
-    return toCamelCase(data) as Row<T>;
+      if (error) {
+        console.error(`Error updating ${table}:`, error);
+        throw error;
+      }
+      if (!data) throw new Error(`Failed to update ${table} with id ${item.id}`);
+      return toCamelCase(data) as Row<T>;
+    });
   }
 
   async delete<T extends TableName>(
     table: T,
     id: string
   ): Promise<void> {
-    const { error } = await supabase
-      .from(table)
-      .delete()
-      .eq('id', id);
+    return retryOperation(async () => {
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', id);
 
-    if (error) throw error;
+      if (error) {
+        console.error(`Error deleting from ${table}:`, error);
+        throw error;
+      }
+    });
   }
 
   async clear<T extends TableName>(table: T): Promise<void> {
-    const { error } = await supabase
-      .from(table)
-      .delete()
-      .neq('id', '');
+    return retryOperation(async () => {
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .neq('id', '');
 
-    if (error) throw error;
+      if (error) {
+        console.error(`Error clearing ${table}:`, error);
+        throw error;
+      }
+    });
   }
 
   async transaction<T>(callback: () => Promise<T>): Promise<T> {
-    return callback();
+    return retryOperation(async () => {
+      return callback();
+    });
   }
 }
 
